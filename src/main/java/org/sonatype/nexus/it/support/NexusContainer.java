@@ -50,7 +50,6 @@ public class NexusContainer
                 .user("root")
                 .run("sed -i 's@(wrap),@(wrap), ssh,@g' /opt/sonatype/nexus/etc/karaf/org.apache.karaf.features.cfg")
                 .run("sed -i 's@-Dkaraf.startLocalConsole=false@-Dkaraf.startLocalConsole=false\\n-Dkaraf.startRemoteShell=true@g' /opt/sonatype/nexus/bin/nexus.vmoptions")
-                .run("cp /plugin/target/nexus-community-it-plugin.jar /opt/sonatype/nexus/deploy/nexus-community-it-plugin.jar")
                 .run("yum install sshpass -y")
                 .run("yum install openssh-clients -y")
                 .user("nexus"))
