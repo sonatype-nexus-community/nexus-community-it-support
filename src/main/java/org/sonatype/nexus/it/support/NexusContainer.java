@@ -16,6 +16,8 @@ import static java.time.Duration.ofSeconds;
 public class NexusContainer
     extends GenericContainer
 {
+  public static final int NXRM_PORT = 8081;
+
   private final Logger log = LoggerFactory.getLogger(getClass());
 
   private static final String STARTED_REGEX = "Started Sonatype Nexus OSS(.*)\\n";
@@ -36,7 +38,7 @@ public class NexusContainer
     );
 
     setWaitStrategy(new LogMessageWaitStrategy().withRegEx(STARTED_REGEX).withStartupTimeout(ofSeconds(120L)));
-    addExposedPort(8081);
+    addExposedPort(NXRM_PORT);
   }
 
   @Override
@@ -46,6 +48,8 @@ public class NexusContainer
     followOutput(new Slf4jLogConsumer(log));
 
     installPlugin();
+
+    log.info("Nexus Repository Manager is running on port " + getMappedPort(NXRM_PORT));
   }
 
   private void installPlugin() {
