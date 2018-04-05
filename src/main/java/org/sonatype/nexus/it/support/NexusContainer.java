@@ -1,6 +1,7 @@
 package org.sonatype.nexus.it.support;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
@@ -11,6 +12,9 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.LogMessageWaitStrategy;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 
+import static java.lang.Long.compare;
+import static java.nio.file.Files.getLastModifiedTime;
+import static java.nio.file.Files.list;
 import static java.time.Duration.ofSeconds;
 
 public class NexusContainer
@@ -21,6 +25,10 @@ public class NexusContainer
   private final Logger log = LoggerFactory.getLogger(getClass());
 
   private static final String STARTED_REGEX = "Started Sonatype Nexus OSS(.*)\\n";
+
+  public NexusContainer() {
+    this(automaticallyFindPluginJar().toString());
+  }
 
   public NexusContainer(final String pluginJarPath) {
     super(new ImageFromDockerfile()
@@ -68,6 +76,32 @@ public class NexusContainer
     }
     catch (IOException | InterruptedException e) {
       log.error("", e);
+    }
+  }
+
+  /**
+   * Attempts to find the latest (last built) jar in the target folder. If this fails you will need to specify the
+   * jar path and pass it to the constructor of NexusContainer.
+   *
+   * @return path of latest jar
+   */
+  private static Path automaticallyFindPluginJar() {
+    try {
+      return list(Paths.get("./target/"))
+          .filter(p -> p.toString().contains("jar"))
+          .filter(p -> !p.toString().contains("sources"))
+          .sorted((f1, f2) -> {
+            try {
+              return compare(getLastModifiedTime(f1).toMillis(), getLastModifiedTime(f2).toMillis());
+            }
+            catch (Exception e) {
+              throw new RuntimeException("Failed to get last modified time of file");
+            }
+          })
+          .findFirst().get();
+    }
+    catch (IOException e) {
+      throw new RuntimeException("Failed to automatically detect plugin jar");
     }
   }
 }
