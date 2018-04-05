@@ -1,5 +1,6 @@
 package org.sonatype.nexus.it.support;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
@@ -19,22 +20,19 @@ public class NexusContainer
 
   private static final String STARTED_REGEX = "Started Sonatype Nexus OSS(.*)\\n";
 
-  private static final String PROJECT_NAME = "nexus-repository-apt-1.0.5"; // TODO: This cannot stay hard-coded
-
-  public NexusContainer() {
+  public NexusContainer(final String pluginJarPath) {
     super(new ImageFromDockerfile()
         .withDockerfileFromBuilder(builder ->
             builder.from("sonatype/nexus3:latest")
                 .add("/plugin/", "/plugin/")
                 .user("root")
-                .run("mkdir -p /opt/sonatype/nexus/system/net/staticsnow/nexus-repository-apt/1.0.5/")
-                .run(
-                    "sed -i 's@nexus-repository-npm</feature>@nexus-repository-npm</feature>\\n        <feature prerequisite=\"false\" dependency=\"false\">nexus-repository-apt</feature>@g' /opt/sonatype/nexus/system/com/sonatype/nexus/assemblies/nexus-oss-feature/3.9.0-01/nexus-oss-feature-3.9.0-01-features.xml;")
-                .run(
-                    "sed -i 's@<feature name=\"nexus-repository-npm\"@<feature name=\"nexus-repository-apt\" description=\"net.staticsnow:nexus-repository-apt\" version=\"1.0.5\">\\n        <details>net.staticsnow:nexus-repository-apt</details>\\n        <bundle>mvn:net.staticsnow/nexus-repository-apt/1.0.5</bundle>\\n    </feature>\\n    <feature name=\"nexus-repository-npm\"@g' /opt/sonatype/nexus/system/com/sonatype/nexus/assemblies/nexus-oss-feature/3.9.0-01/nexus-oss-feature-3.9.0-01-features.xml;")
-                .run("cp /plugin/target/nexus-community-it-plugin.jar /opt/sonatype/nexus/system/net/staticsnow/nexus-repository-apt/1.0.5/nexus-repository-apt-1.0.5.jar")
+                .run("sed -i 's@(wrap),@(wrap), ssh,@g' /opt/sonatype/nexus/etc/karaf/org.apache.karaf.features.cfg")
+                .run("sed -i 's@-Dkaraf.startLocalConsole=false@-Dkaraf.startLocalConsole=false\\n-Dkaraf.startRemoteShell=true@g' /opt/sonatype/nexus/bin/nexus.vmoptions")
+                .run("cp /plugin/target/nexus-community-it-plugin.jar /opt/sonatype/nexus/deploy/nexus-community-it-plugin.jar")
+                .run("yum install sshpass -y")
+                .run("yum install openssh-clients -y")
                 .user("nexus"))
-        .withFileFromPath("plugin/target/nexus-community-it-plugin.jar", Paths.get("./target/" + PROJECT_NAME + ".jar"))
+        .withFileFromPath("plugin/target/nexus-community-it-plugin.jar", Paths.get(pluginJarPath))
     );
 
     setWaitStrategy(new LogMessageWaitStrategy().withRegEx(STARTED_REGEX).withStartupTimeout(ofSeconds(120L)));
@@ -44,6 +42,28 @@ public class NexusContainer
   @Override
   protected void containerIsStarted(final InspectContainerResponse containerInfo) {
     super.containerIsStarted(containerInfo);
+
     followOutput(new Slf4jLogConsumer(log));
+
+    installPlugin();
+  }
+
+  private void installPlugin() {
+    try {
+      execInContainer("sshpass", "-p", "admin123", "ssh", "127.0.0.1", "-p",
+          "8022", "-o", "StrictHostKeyChecking=no", "-l", "admin",
+          "bundle:install file:///plugin/target/nexus-community-it-plugin.jar");
+
+      String id = execInContainer("sshpass", "-p", "admin123", "ssh", "127.0.0.1", "-p",
+          "8022", "-o", "StrictHostKeyChecking=no", "-l", "admin",
+          "bundle:list | grep Installed").getStdout().split("\\|")[0];
+
+      execInContainer("sshpass", "-p", "admin123", "ssh", "127.0.0.1", "-p",
+          "8022", "-o", "StrictHostKeyChecking=no", "-l", "admin",
+          "bundle:start " + id);
+    }
+    catch (IOException | InterruptedException e) {
+      log.error("", e);
+    }
   }
 }
