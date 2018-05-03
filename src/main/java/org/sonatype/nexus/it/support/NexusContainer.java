@@ -32,7 +32,11 @@ import static java.time.Duration.ofSeconds;
 public class NexusContainer
     extends GenericContainer
 {
-  public static final int NXRM_PORT = 8081;
+  private static final int NXRM_PORT = 8081;
+
+  private static final String USERNAME = "admin";
+
+  private static final String PASSWORD = "admin123";
 
   private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -59,7 +63,7 @@ public class NexusContainer
     setWaitStrategy(new LogMessageWaitStrategy().withRegEx(STARTED_REGEX).withStartupTimeout(ofSeconds(120L)));
     addExposedPort(NXRM_PORT);
   }
-
+  
   @Override
   protected void containerIsStarted(final InspectContainerResponse containerInfo) {
     super.containerIsStarted(containerInfo);
@@ -114,5 +118,17 @@ public class NexusContainer
     catch (IOException e) {
       throw new RuntimeException("Failed to automatically detect plugin jar");
     }
+  }
+
+  public int getPort() {
+    return getMappedPort(NXRM_PORT);
+  }
+  
+  public String getUsername() {
+    return USERNAME;
+  }
+  
+  public String getPassword() {
+    return PASSWORD;
   }
 }
