@@ -25,8 +25,21 @@
   </parent>
 
   <groupId>org.sonatype.nexus</groupId>
-  <artifactId>community-it-support</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <artifactId>nxrm-community-it-support</artifactId>
+  <version>1.0</version>
+  <packaging>jar</packaging>
+
+  <name>NXRM Community plugin IT Support</name>
+  <description>Provides infrastructure for integration testing community provided plugins for NXRM</description>
+  <url>https://github.com/sonatype-nexus-community/nexus-community-it-support</url>
+
+  <licenses>
+    <license>
+      <name>Eclipse Public License, Version 1.0</name>
+      <url>https://github.com/sonatype-nexus-community/nexus-community-it-support/blob/master/LICENSE</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <dependencies>
     <dependency>
