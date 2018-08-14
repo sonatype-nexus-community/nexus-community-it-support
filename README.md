@@ -1,4 +1,6 @@
 # Nexus repository IT support
+[![DepShield Badge](https://depshield.sonatype.org/badges/sonatype-nexus-community/nexus-community-it-support/depshield.svg)](https://depshield.github.io)
+
 Utilises https://www.testcontainers.org to build a Nexus repository manager instance with the 
 plugin installed.
 
